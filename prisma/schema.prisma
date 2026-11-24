@@ -1,0 +1,897 @@
+// ============================================================
+// PHIDHOSTING — Prisma Schema
+// ============================================================
+// Database: SQLite (dev) / MySQL (production)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USERS & AUTHENTICATION
+// ============================================================
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  passwordHash      String?
+  name              String?
+  phone             String?
+  role              String    @default("CUSTOMER")
+  status            String    @default("ACTIVE")
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  profile           CustomerProfile?
+  sessions          Session[]
+  accounts          Account[]
+  verificationTokens VerificationToken[]
+  passwordResets    PasswordReset[]
+
+  // Customer relations
+  orders            Order[]
+  invoices          Invoice[]
+  payments          Payment[]
+  domains           Domain[]
+  hostingAccounts   HostingAccount[]
+  emailServices     EmailService[]
+  supportTickets    SupportTicket[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  // Staff relations
+  assignedTickets   SupportTicket[] @relation("AssignedStaff")
+  staffPermissions  StaffPermission[]
+
+  @@map("users")
+}
+
+model CustomerProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName     String?
+  address1        String?
+  address2        String?
+  city            String?
+  state           String?
+  postalCode      String?
+  country         String   @default("TZ")
+  taxId           String?
+  billingEmail    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("customer_profiles")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+  createdAt    DateTime @default(now())
+
+  @@map("sessions")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  type      String    @default("EMAIL_VERIFICATION")
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@map("verification_tokens")
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expires   DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("password_resets")
+}
+
+// ============================================================
+// STAFF & PERMISSIONS
+// ============================================================
+
+model StaffPermission {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission String
+  grantedAt  DateTime @default(now())
+  grantedBy  String?
+
+  @@unique([userId, permission])
+  @@map("staff_permissions")
+}
+
+// ============================================================
+// SYSTEM SETTINGS
+// ============================================================
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String   @default("string")
+  group       String   @default("general")
+  label       String?
+  description String?
+  isPublic    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@map("system_settings")
+}
+
+// ============================================================
+// PRODUCTS & PACKAGES
+// ============================================================
+
+model HostingPackage {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  shortDescription String?
+  isActive        Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  sortOrder       Int      @default(0)
+
+  storageGB       Int
+  bandwidthGB     Int?
+  maxWebsites     Int
+  maxEmailAccounts Int?
+  maxDatabases    Int?
+  maxSubdomains   Int?
+  maxFtpAccounts  Int?
+  sslIncluded     Boolean  @default(true)
+  dailyBackups    Boolean  @default(false)
+  features        String?
+
+  cPanelPackageName String?
+  serverId        String?
+  server          HostingServer? @relation(fields: [serverId], references: [id])
+
+  pricing         HostingPackagePrice[]
+  hostingAccounts HostingAccount[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("hosting_packages")
+}
+
+model HostingPackagePrice {
+  id               String         @id @default(cuid())
+  packageId        String
+  package          HostingPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  billingPeriod    String
+  price            Float
+  compareAtPrice   Float?
+  currency         String         @default("USD")
+  isActive         Boolean        @default(true)
+
+  @@unique([packageId, billingPeriod])
+  @@map("hosting_package_prices")
+}
+
+model EmailPackage {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  shortDescription String?
+  isActive        Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  sortOrder       Int      @default(0)
+
+  maxMailboxes    Int
+  mailboxQuotaGB  Int
+  hasWebmail      Boolean  @default(true)
+  hasImap         Boolean  @default(true)
+  hasSmtp         Boolean  @default(true)
+  maxAliases      Int?
+  spamProtection  Boolean  @default(true)
+  features        String?
+
+  pricing         EmailPackagePrice[]
+  emailServices   EmailService[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_packages")
+}
+
+model EmailPackagePrice {
+  id               String       @id @default(cuid())
+  packageId        String
+  package          EmailPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  billingPeriod    String
+  price            Float
+  compareAtPrice   Float?
+  currency         String       @default("USD")
+  isActive         Boolean      @default(true)
+
+  @@unique([packageId, billingPeriod])
+  @@map("email_package_prices")
+}
+
+// ============================================================
+// DOMAIN EXTENSIONS & PRICING
+// ============================================================
+
+model DomainExtension {
+  id              String   @id @default(cuid())
+  tld             String   @unique
+  registrationPrice Float
+  renewalPrice    Float
+  transferPrice   Float?
+  currency        String   @default("USD")
+  isActive        Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  registrarId     String?
+  registrar       Registrar? @relation(fields: [registrarId], references: [id])
+  minYears        Int      @default(1)
+  maxYears        Int      @default(10)
+  eligibilityReq  String?
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  domains Domain[]
+
+  @@map("domain_extensions")
+}
+
+// ============================================================
+// REGISTRARS
+// ============================================================
+
+model Registrar {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  type            String
+  apiEndpoint     String?
+  isActive        Boolean  @default(true)
+  isSandbox       Boolean  @default(true)
+  supportsTransfer Boolean @default(true)
+  supportsDns     Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  extensions      DomainExtension[]
+  domains         Domain[]
+
+  @@map("registrars")
+}
+
+// ============================================================
+// HOSTING SERVERS
+// ============================================================
+
+model HostingServer {
+  id              String   @id @default(cuid())
+  name            String
+  hostname        String
+  ipAddress       String?
+  apiUrl          String?
+  username        String?
+  status          String   @default("ACTIVE")
+  isSandbox       Boolean  @default(true)
+  maxAccounts     Int?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  packages        HostingPackage[]
+  hostingAccounts HostingAccount[]
+
+  @@map("hosting_servers")
+}
+
+model MailServer {
+  id              String   @id @default(cuid())
+  name            String
+  hostname        String
+  apiUrl          String?
+  status          String   @default("ACTIVE")
+  isSandbox       Boolean  @default(true)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  emailServices   EmailService[]
+
+  @@map("mail_servers")
+}
+
+// ============================================================
+// ORDERS
+// ============================================================
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  status          String      @default("PENDING")
+  currency        String      @default("USD")
+  subtotal        Float
+  discount        Float       @default(0)
+  tax             Float       @default(0)
+  total           Float
+  couponCode      String?
+  couponId        String?
+  coupon          Coupon?     @relation(fields: [couponId], references: [id])
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items           OrderItem[]
+  invoice         Invoice?
+  provisioningJobs ProvisioningJob[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String          @id @default(cuid())
+  orderId         String
+  order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type            String
+  productName     String
+  description     String?
+  domain          String?
+  billingPeriod   String?
+  quantity        Int             @default(1)
+  unitPrice       Float
+  discount        Float           @default(0)
+  total           Float
+  hostingPackageId String?
+  emailPackageId  String?
+  domainExtensionId String?
+  createdAt       DateTime        @default(now())
+
+  @@map("order_items")
+}
+
+// ============================================================
+// INVOICES & BILLING
+// ============================================================
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  orderId         String?       @unique
+  order           Order?        @relation(fields: [orderId], references: [id])
+  status          String        @default("UNPAID")
+  currency        String        @default("USD")
+  subtotal        Float
+  discount        Float         @default(0)
+  tax             Float         @default(0)
+  total           Float
+  amountPaid      Float         @default(0)
+  dueDate         DateTime
+  paidAt          DateTime?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items           InvoiceItem[]
+  payments        Payment[]
+  subscriptions   Subscription[]
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Float
+  discount    Float    @default(0)
+  total       Float
+  createdAt   DateTime @default(now())
+
+  @@map("invoice_items")
+}
+
+// ============================================================
+// PAYMENTS
+// ============================================================
+
+model PaymentGateway {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  type        String
+  isActive    Boolean  @default(false)
+  isSandbox   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  payments    Payment[]
+  transactions PaymentTransaction[]
+
+  @@map("payment_gateways")
+}
+
+model Payment {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  invoiceId       String
+  invoice         Invoice        @relation(fields: [invoiceId], references: [id])
+  gatewayId       String?
+  gateway         PaymentGateway? @relation(fields: [gatewayId], references: [id])
+  amount          Float
+  currency        String         @default("USD")
+  status          String         @default("PENDING")
+  reference       String?        @unique
+  gatewayRef      String?
+  method          String?
+  paidAt          DateTime?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  transactions    PaymentTransaction[]
+
+  @@map("payments")
+}
+
+model PaymentTransaction {
+  id          String         @id @default(cuid())
+  paymentId   String
+  payment     Payment        @relation(fields: [paymentId], references: [id])
+  gatewayId   String?
+  gateway     PaymentGateway? @relation(fields: [gatewayId], references: [id])
+  type        String
+  status      String
+  amount      Float
+  currency    String         @default("USD")
+  reference   String?
+  rawResponse String?
+  createdAt   DateTime       @default(now())
+
+  @@map("payment_transactions")
+}
+
+// ============================================================
+// SUBSCRIPTIONS & RENEWALS
+// ============================================================
+
+model Subscription {
+  id              String             @id @default(cuid())
+  userId          String
+  type            String
+  status          String             @default("ACTIVE")
+  billingPeriod   String
+  startDate       DateTime
+  nextDueDate     DateTime
+  expiryDate      DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  autoRenew       Boolean            @default(true)
+  invoiceId       String?
+  invoice         Invoice?           @relation(fields: [invoiceId], references: [id])
+
+  domainId        String?            @unique
+  domain          Domain?            @relation(fields: [domainId], references: [id])
+  hostingAccountId String?           @unique
+  hostingAccount  HostingAccount?    @relation(fields: [hostingAccountId], references: [id])
+  emailServiceId  String?            @unique
+  emailService    EmailService?      @relation(fields: [emailServiceId], references: [id])
+
+  renewals        Renewal[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@map("subscriptions")
+}
+
+model Renewal {
+  id              String         @id @default(cuid())
+  subscriptionId  String
+  subscription    Subscription   @relation(fields: [subscriptionId], references: [id])
+  dueDate         DateTime
+  status          String         @default("PENDING")
+  amount          Float
+  currency        String         @default("USD")
+  invoiceId       String?
+  processedAt     DateTime?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("renewals")
+}
+
+// ============================================================
+// DOMAINS
+// ============================================================
+
+model Domain {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  domainName      String        @unique
+  tld             String
+  extensionId     String?
+  extension       DomainExtension? @relation(fields: [extensionId], references: [id])
+  registrarId     String?
+  registrar       Registrar?    @relation(fields: [registrarId], references: [id])
+  status          String        @default("PENDING")
+  registrationDate DateTime?
+  expiryDate      DateTime?
+  autoRenew       Boolean       @default(true)
+  privacyProtection Boolean     @default(false)
+  registrarDomainId String?
+  nameservers     String?
+  registrantEmail String?
+  registrantName  String?
+  transferLocked  Boolean       @default(true)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  subscription    Subscription?
+  dnsRecords      DnsRecord[]
+
+  @@map("domains")
+}
+
+model DnsRecord {
+  id          String   @id @default(cuid())
+  domainId    String
+  domain      Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  type        String
+  name        String
+  value       String
+  ttl         Int      @default(3600)
+  priority    Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("dns_records")
+}
+
+// ============================================================
+// HOSTING ACCOUNTS
+// ============================================================
+
+model HostingAccount {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  packageId       String
+  package         HostingPackage @relation(fields: [packageId], references: [id])
+  serverId        String?
+  server          HostingServer? @relation(fields: [serverId], references: [id])
+  domain          String
+  username        String?
+  status          String         @default("PENDING")
+  cPanelAccountId String?
+  billingPeriod   String
+  startDate       DateTime?
+  expiryDate      DateTime?
+  suspendedAt     DateTime?
+  suspendReason   String?
+  storageUsedMB   Int?
+  bandwidthUsedMB Int?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  subscription    Subscription?
+  provisioningJobs ProvisioningJob[]
+
+  @@map("hosting_accounts")
+}
+
+// ============================================================
+// EMAIL SERVICES
+// ============================================================
+
+model EmailService {
+  id              String       @id @default(cuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  packageId       String
+  package         EmailPackage @relation(fields: [packageId], references: [id])
+  mailServerId    String?
+  mailServer      MailServer?  @relation(fields: [mailServerId], references: [id])
+  domain          String
+  status          String        @default("PENDING")
+  billingPeriod   String
+  startDate       DateTime?
+  expiryDate      DateTime?
+  suspendedAt     DateTime?
+  suspendReason   String?
+  dnsVerified     Boolean      @default(false)
+  dnsVerifiedAt   DateTime?
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  subscription    Subscription?
+  mailboxes       Mailbox[]
+  provisioningJobs ProvisioningJob[]
+
+  @@map("email_services")
+}
+
+model Mailbox {
+  id              String       @id @default(cuid())
+  emailServiceId  String
+  emailService    EmailService @relation(fields: [emailServiceId], references: [id], onDelete: Cascade)
+  localPart       String
+  domain          String
+  fullEmail       String
+  quotaGB         Float
+  usedMB          Float?
+  status          String       @default("active")
+  mailcowMailboxId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([fullEmail])
+  @@map("mailboxes")
+}
+
+// ============================================================
+// PROVISIONING JOBS
+// ============================================================
+
+model ProvisioningJob {
+  id              String            @id @default(cuid())
+  type            String
+  status          String            @default("PENDING")
+  orderId         String?
+  order           Order?            @relation(fields: [orderId], references: [id])
+  hostingAccountId String?
+  hostingAccount  HostingAccount?   @relation(fields: [hostingAccountId], references: [id])
+  emailServiceId  String?
+  emailService    EmailService?     @relation(fields: [emailServiceId], references: [id])
+  attempts        Int               @default(0)
+  maxAttempts     Int               @default(3)
+  lastAttemptAt   DateTime?
+  completedAt     DateTime?
+  failedAt        DateTime?
+  errorMessage    String?
+  payload         String?
+  result          String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  logs            ProvisioningLog[]
+
+  @@map("provisioning_jobs")
+}
+
+model ProvisioningLog {
+  id          String          @id @default(cuid())
+  jobId       String
+  job         ProvisioningJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  level       String          @default("info")
+  message     String
+  data        String?
+  createdAt   DateTime        @default(now())
+
+  @@map("provisioning_logs")
+}
+
+// ============================================================
+// SUPPORT
+// ============================================================
+
+model SupportTicket {
+  id          String        @id @default(cuid())
+  ticketNumber String       @unique
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  assignedTo  String?
+  assignee    User?         @relation("AssignedStaff", fields: [assignedTo], references: [id])
+  subject     String
+  category    String
+  priority    String         @default("MEDIUM")
+  status      String         @default("OPEN")
+  serviceType String?
+  serviceId   String?
+  resolvedAt  DateTime?
+  closedAt    DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  replies     TicketReply[]
+
+  @@map("support_tickets")
+}
+
+model TicketReply {
+  id          String        @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId      String
+  message     String
+  isStaffNote Boolean       @default(false)
+  attachments String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("ticket_replies")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  message     String
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  link        String?
+  data        String?
+  createdAt   DateTime         @default(now())
+
+  @@map("notifications")
+}
+
+model NotificationTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  subject     String
+  bodyHtml    String
+  bodyText    String?
+  variables   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("notification_templates")
+}
+
+// ============================================================
+// PROMOTIONS & COUPONS
+// ============================================================
+
+model Coupon {
+  id              String     @id @default(cuid())
+  code            String     @unique
+  name            String
+  type            String
+  value           Float
+  minOrderAmount  Float?
+  maxUsage        Int?
+  usedCount       Int        @default(0)
+  maxUsagePerUser Int?
+  validFrom       DateTime?
+  validTo         DateTime?
+  isActive        Boolean    @default(true)
+  applicableTo    String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  orders          Order[]
+
+  @@map("coupons")
+}
+
+// ============================================================
+// CONTENT PAGES (Legal, etc.)
+// ============================================================
+
+model ContentPage {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  title       String
+  content     String
+  status      String      @default("DRAFT")
+  metaTitle   String?
+  metaDesc    String?
+  publishedAt DateTime?
+  updatedBy   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("content_pages")
+}
+
+// ============================================================
+// AUDIT LOGS
+// ============================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  resource    String
+  resourceId  String?
+  details     String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// ============================================================
+// STRING CONSTANTS (documented for SQLite compatibility)
+// ============================================================
+// UserRole:         CUSTOMER | SUPPORT | FINANCE | HOSTING_MANAGER | ADMIN | SUPER_ADMIN
+// UserStatus:       ACTIVE | INACTIVE | SUSPENDED | BANNED
+// TokenType:        EMAIL_VERIFICATION | PASSWORD_RESET | API_ACCESS
+// BillingPeriod:    MONTHLY | QUARTERLY | SEMI_ANNUALLY | ANNUALLY | BIENNIALLY
+// OrderStatus:      PENDING | PROCESSING | ACTIVE | COMPLETED | CANCELLED | REFUNDED | FRAUD
+// OrderItemType:    DOMAIN_REGISTRATION | DOMAIN_RENEWAL | DOMAIN_TRANSFER | WEB_HOSTING | EMAIL_HOSTING | ADDON
+// InvoiceStatus:    DRAFT | UNPAID | PENDING | PAID | PARTIALLY_PAID | OVERDUE | CANCELLED | REFUNDED
+// PaymentStatus:    PENDING | PROCESSING | COMPLETED | FAILED | CANCELLED | REFUNDED
+// DomainStatus:     PENDING | ACTIVE | EXPIRED | SUSPENDED | CANCELLED | TRANSFER_PENDING | REDEMPTION_PERIOD | DELETED
+// ServiceStatus:    PENDING | PROVISIONING | ACTIVE | SUSPENDED | CANCELLED | EXPIRED | TERMINATED
+// SubscriptionType: DOMAIN | WEB_HOSTING | EMAIL_HOSTING
+// SubscriptionStatus: ACTIVE | SUSPENDED | CANCELLED | EXPIRED
+// RenewalStatus:    PENDING | INVOICED | PAID | COMPLETED | FAILED | SKIPPED
+// ProvisioningType: CREATE_HOSTING_ACCOUNT | SUSPEND_HOSTING_ACCOUNT | UNSUSPEND_HOSTING_ACCOUNT | TERMINATE_HOSTING_ACCOUNT | CREATE_EMAIL_DOMAIN | CREATE_MAILBOX | SUSPEND_EMAIL_SERVICE | REGISTER_DOMAIN | RENEW_DOMAIN | TRANSFER_DOMAIN
+// JobStatus:        PENDING | PROCESSING | COMPLETED | FAILED | CANCELLED
+// TicketPriority:   LOW | MEDIUM | HIGH | URGENT
+// TicketStatus:     OPEN | IN_PROGRESS | AWAITING_CUSTOMER | RESOLVED | CLOSED
+// RegistrarType:    SPACESHIP | TZ_REGISTRAR | MANUAL | OTHER
+// ServerStatus:     ACTIVE | MAINTENANCE | OFFLINE
+// CouponType:       PERCENTAGE | FIXED
+// PageStatus:       DRAFT | PUBLISHED | ARCHIVED
