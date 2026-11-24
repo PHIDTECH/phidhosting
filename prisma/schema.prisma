@@ -52,6 +52,10 @@ model User {
   assignedTickets   SupportTicket[] @relation("AssignedStaff")
   staffPermissions  StaffPermission[]
 
+  // SMS
+  sentSmsLogs       SmsLog[]        @relation("SentSms")
+  receivedSmsLogs   SmsLog[]        @relation("ReceivedSms")
+
   @@map("users")
 }
 
@@ -869,6 +873,25 @@ model AuditLog {
   createdAt   DateTime @default(now())
 
   @@map("audit_logs")
+}
+
+// ============================================================
+// SMS LOG
+// ============================================================
+
+model SmsLog {
+  id          String   @id @default(cuid())
+  sentById    String?
+  sentBy      User?    @relation("SentSms", fields: [sentById], references: [id])
+  recipientId String?
+  recipient   User?    @relation("ReceivedSms", fields: [recipientId], references: [id])
+  phone       String
+  message     String
+  status      String   @default("SENT")
+  beemRef     String?
+  createdAt   DateTime @default(now())
+
+  @@map("sms_logs")
 }
 
 // ============================================================

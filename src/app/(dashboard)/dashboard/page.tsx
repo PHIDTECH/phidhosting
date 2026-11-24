@@ -7,6 +7,7 @@ import {
   Plus, Headphones, MessageSquare, BookOpen,
 } from "lucide-react";
 import { format } from "date-fns";
+import { PayButton } from "@/components/dashboard/PayButton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -375,9 +376,7 @@ export default async function DashboardPage() {
                   <div className="text-right">
                     <p className="text-sm font-semibold text-slate-900">${inv.total.toFixed(2)}</p>
                     {["UNPAID", "OVERDUE"].includes(inv.status) && (
-                      <Link href="/dashboard/invoices" className="text-xs text-brand-600 font-medium hover:underline">
-                        Review &amp; pay
-                      </Link>
+                      <PayButton invoiceId={inv.id} label="Pay" />
                     )}
                   </div>
                 </div>

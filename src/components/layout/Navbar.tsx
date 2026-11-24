@@ -116,11 +116,11 @@ export function Navbar() {
           {/* Desktop auth */}
           <div className="hidden lg:flex items-center gap-3">
             <Link
-              href="tel:+255000000000"
+              href="tel:+255744741874"
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700"
             >
               <Phone className="h-3.5 w-3.5" />
-              Support
+              +255 744 741 874
             </Link>
             <Link href="/login">
               <Button variant="ghost" size="sm">

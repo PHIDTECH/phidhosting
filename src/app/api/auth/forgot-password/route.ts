@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { sendSms } from "@/lib/sms";
+import { notifyPasswordResetRequested } from "@/lib/notifications";
 
 const schema = z.object({
   email: z.string().email(),
@@ -12,7 +14,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email } = schema.parse(body);
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true, phone: true } });
 
     if (user) {
       await prisma.passwordReset.updateMany({
@@ -22,14 +24,23 @@ export async function POST(req: NextRequest) {
 
       const token = crypto.randomBytes(32).toString("hex");
       const expires = new Date(Date.now() + 1000 * 60 * 60);
+      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+      const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
       await prisma.passwordReset.create({
         data: { userId: user.id, token, expires },
       });
 
-      console.log(
-        `[DEV] Password reset link: ${process.env.NEXTAUTH_URL || "http://localhost:3000"}/reset-password?token=${token}`
-      );
+      console.log(`[DEV] Password reset link: ${resetUrl}`);
+
+      // SMS with reset link (if phone registered)
+      if (user.phone) {
+        const smsMsg = `PHIDHOSTING: Password reset requested. Click to reset: ${resetUrl} (expires in 1 hour). Ignore if not you.`;
+        sendSms(user.phone, smsMsg).catch(() => {});
+      }
+
+      // In-system notification
+      notifyPasswordResetRequested(user.id).catch(() => {});
     }
 
     return NextResponse.json({

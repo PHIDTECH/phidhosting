@@ -9,7 +9,7 @@ import { UserPlus, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", website: "" });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -81,12 +81,24 @@ export default function RegisterPage() {
             autoComplete="email"
           />
           <Input
-            label="Phone number (optional)"
+            label="Phone number"
             type="tel"
-            placeholder="+255 XXX XXX XXX"
+            placeholder="0744 741 874 or +255744741874"
             value={form.phone}
             onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+            required
             autoComplete="tel"
+          />
+          {/* Honeypot: hidden from real users, bots fill it */}
+          <input
+            type="text"
+            name="website"
+            value={form.website}
+            onChange={(e) => setForm((p) => ({ ...p, website: e.target.value }))}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            style={{ display: "none" }}
           />
           <div>
             <Input

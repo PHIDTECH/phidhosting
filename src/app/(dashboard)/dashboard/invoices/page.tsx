@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { FileText } from "lucide-react";
 import { format } from "date-fns";
+import { PayButton } from "@/components/dashboard/PayButton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Invoices & Payments" };
@@ -138,13 +139,9 @@ export default async function InvoicesPage() {
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         {["UNPAID", "OVERDUE", "PARTIALLY_PAID"].includes(inv.status) ? (
-                          <button className="text-xs font-medium text-brand-600 hover:text-brand-700 border border-brand-200 rounded px-3 py-1.5 hover:bg-brand-50 transition-colors">
-                            Pay now →
-                          </button>
+                          <PayButton invoiceId={inv.id} />
                         ) : (
-                          <button className="text-xs font-medium text-slate-600 hover:text-brand-600 border border-slate-200 rounded px-3 py-1.5 hover:border-brand-300 transition-colors">
-                            View →
-                          </button>
+                          <span className="text-xs text-slate-400">—</span>
                         )}
                       </td>
                     </tr>

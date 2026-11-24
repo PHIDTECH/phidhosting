@@ -5,7 +5,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Users, Globe, Server, Mail, FileText,
   CreditCard, Ticket, Cpu, Database, Shield, ClipboardList,
-  Settings, ChevronLeft, ChevronRight, Activity, Building2,
+  Settings, ChevronLeft, ChevronRight, Activity, Building2, MessageSquare,
 } from "lucide-react";
 
 type NavItem = {
@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
   { label: "Email Hosting", href: "/admin/email", icon: Mail },
   { label: "Finance", href: "/admin/finance", icon: CreditCard, roles: ["ADMIN", "SUPER_ADMIN", "FINANCE"] },
   { label: "Support", href: "/admin/support", icon: Ticket },
+  { label: "Messages", href: "/admin/messages", icon: MessageSquare, roles: ["ADMIN", "SUPER_ADMIN"] },
   { label: "Provisioning", href: "/admin/provisioning", icon: Activity },
   { label: "Servers", href: "/admin/servers", icon: Cpu, roles: ["ADMIN", "SUPER_ADMIN", "HOSTING_MANAGER"] },
   { label: "DNS & Registrars", href: "/admin/dns", icon: Database, roles: ["ADMIN", "SUPER_ADMIN"] },
