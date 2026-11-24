@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { AddStaffForm } from "./AddStaffForm";
 import { format } from "date-fns";
 import type { Metadata } from "next";
 
@@ -60,6 +61,8 @@ export default async function AdminStaffPage() {
           {staff.length} staff member{staff.length !== 1 ? "s" : ""}. Manage roles and permissions.
         </p>
       </div>
+
+      {session.user.role === "SUPER_ADMIN" && <AddStaffForm />}
 
       {/* Role guide */}
       <Card className="bg-slate-50">

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Database, Globe, Building2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddRegistrarForm } from "./AddRegistrarForm";
 import { format } from "date-fns";
 import type { Metadata } from "next";
 
@@ -42,6 +43,8 @@ export default async function AdminDnsPage({
           Registrar integrations, DNS records across {domainCount} domain{domainCount !== 1 ? "s" : ""}.
         </p>
       </div>
+
+      {["SUPER_ADMIN", "ADMIN"].includes(session.user.role) && <AddRegistrarForm />}
 
       {/* Nameserver info panel */}
       <Card className="border-brand-200 bg-brand-50/50">

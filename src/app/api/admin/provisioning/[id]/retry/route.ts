@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { processProvisioningJob } from "@/lib/provisioning";
 import { NextResponse } from "next/server";
 
 const ALLOWED_ROLES = ["SUPER_ADMIN", "ADMIN", "HOSTING_MANAGER"];
@@ -49,5 +50,8 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({ success: true, job: updated });
+  await processProvisioningJob(id);
+
+  const result = await prisma.provisioningJob.findUnique({ where: { id } });
+  return NextResponse.json({ success: true, job: result ?? updated });
 }

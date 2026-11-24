@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Cpu, Mail, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddServerForm } from "./AddServerForm";
 import { format } from "date-fns";
 import type { Metadata } from "next";
 
@@ -29,12 +30,16 @@ export default async function AdminServersPage() {
 
   return (
     <div className="space-y-8 max-w-6xl">
-      <div>
-        <h1 className="font-heading text-2xl font-bold text-slate-900">Server Infrastructure</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Web hosting (WHM/cPanel) and email hosting (Mailcow) servers.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-slate-900">Server Infrastructure</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Web hosting (WHM/cPanel) and email hosting (Mailcow) servers.
+          </p>
+        </div>
       </div>
+
+      <AddServerForm />
 
       {/* WHM / cPanel Servers */}
       <section>

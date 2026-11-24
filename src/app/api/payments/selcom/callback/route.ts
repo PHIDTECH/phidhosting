@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyPaymentReceived } from "@/lib/notifications";
 import { sendSms } from "@/lib/sms";
+import { provisionOrder } from "@/lib/provisioning";
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     const payment = await prisma.payment.findUnique({
       where: { reference: orderId },
       include: {
-        invoice: { select: { id: true, invoiceNumber: true, total: true, amountPaid: true, userId: true } },
+        invoice: { select: { id: true, invoiceNumber: true, total: true, amountPaid: true, userId: true, orderId: true } },
         user: { select: { name: true, phone: true, email: true } },
       },
     });
@@ -84,6 +85,13 @@ export async function POST(req: NextRequest) {
       if (payment.user.phone) {
         const msg = `PHIDHOSTING: Payment of ${payment.currency} ${paidAmount.toFixed(2)} received for invoice ${payment.invoice.invoiceNumber}. Thank you!`;
         sendSms(payment.user.phone, msg).catch(() => {});
+      }
+
+      // Provision services once the invoice is fully paid
+      if (fullyPaid && payment.invoice.orderId) {
+        provisionOrder(payment.invoice.orderId).catch((e) =>
+          console.error("[Provisioning] provisionOrder failed:", e)
+        );
       }
     } else {
       await prisma.payment.update({

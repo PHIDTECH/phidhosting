@@ -208,9 +208,9 @@ export default function DomainsPage() {
                       </p>
                       <p className="text-xs text-brand-600 mt-0.5">{cart.join(", ")}</p>
                     </div>
-                    <Link href="/register">
+                    <Link href={`/checkout?type=domain&domains=${cart.join(",")}`}>
                       <Button size="sm">
-                        Continue to Register
+                        Continue to Checkout
                         <ArrowRight className="h-4 w-4" />
                       </Button>
                     </Link>

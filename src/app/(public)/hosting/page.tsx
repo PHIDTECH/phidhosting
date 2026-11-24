@@ -210,7 +210,7 @@ export default function HostingPage() {
                         </li>
                       ))}
                     </ul>
-                    <Link href={`/register?plan=${pkg.id}&type=hosting`}>
+                    <Link href={`/checkout?type=hosting&plan=${pkg.id}`}>
                       <Button
                         className="w-full"
                         variant={pkg.isFeatured || isHighlighted ? "default" : "outline"}

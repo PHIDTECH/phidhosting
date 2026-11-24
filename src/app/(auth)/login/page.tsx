@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, LogIn } from "lucide-react";
@@ -10,7 +10,9 @@ import { Eye, EyeOff, LogIn } from "lucide-react";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl");
+
+  const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "FINANCE", "SUPPORT", "HOSTING_MANAGER"];
 
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
@@ -29,8 +31,12 @@ export default function LoginPage() {
       });
       if (result?.error) {
         setError("Invalid email or password. Please try again.");
-      } else {
+      } else if (callbackUrl) {
         router.push(callbackUrl);
+        router.refresh();
+      } else {
+        const session = await getSession();
+        router.push(ADMIN_ROLES.includes(session?.user?.role ?? "") ? "/admin" : "/dashboard");
         router.refresh();
       }
     } catch {

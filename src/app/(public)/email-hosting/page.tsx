@@ -215,7 +215,7 @@ export default function EmailHostingPage() {
                         </li>
                       ))}
                     </ul>
-                    <Link href={`/register?plan=${pkg.id}&type=email`}>
+                    <Link href={`/checkout?type=email&plan=${pkg.id}`}>
                       <Button
                         className="w-full"
                         variant={pkg.isFeatured ? "default" : "outline"}

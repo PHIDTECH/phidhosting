@@ -91,6 +91,7 @@ export default async function HostingPage() {
                     <th>Expires</th>
                     <th>Storage</th>
                     <th>Status</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -130,6 +131,18 @@ export default async function HostingPage() {
                         <span className={statusBadge(account.status)}>
                           {account.status}
                         </span>
+                      </td>
+                      <td>
+                        {account.status === "ACTIVE" && account.username && (
+                          <a
+                            href={`/api/dashboard/hosting/${account.id}/cpanel`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-brand-600 hover:text-brand-700 border border-slate-200 rounded px-2.5 py-1 whitespace-nowrap"
+                          >
+                            Open cPanel
+                          </a>
+                        )}
                       </td>
                     </tr>
                   ))}
