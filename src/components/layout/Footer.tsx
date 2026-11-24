@@ -38,7 +38,7 @@ const footerLinks = {
       { label: "Client Portal", href: "/dashboard" },
       { label: "Sign In", href: "/login" },
       { label: "Create Account", href: "/register" },
-      { label: "Submit Ticket", href: "/support/tickets/new" },
+      { label: "Submit Ticket", href: "/dashboard/support/new" },
     ],
   },
 };
